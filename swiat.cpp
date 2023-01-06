@@ -1,4 +1,5 @@
 #include <iostream>
+#include "swiat.h"
 
 class Swiat {
 
