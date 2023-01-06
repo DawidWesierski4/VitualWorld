@@ -21,19 +21,23 @@ class Swiat
     int sizeSwiatArray;
 
 public:
+    Swiat(int x)
+    {
+        int i;
+        swiatArray = new int*[x];
+        for (i = 0; i < x; i++)
+            swiatArray[i] = new int[x];
+    }
+
     void WykonajTure(void)
     {
         std::cout<<"WykonajTure"<<std::endl;
     }
 
-    void rysujSwiat(int x)
+    void rysujSwiat()
     {
-        int i;
+        
 
-    
-        swiatArray = new int*[x];
-        for (i = 0; i < x; i++)
-            swiatArray[i] = new int[x];
 
         std::cout<<"rysujSwiat"<<std::endl;
         std::cout<<"imie Autora = "<<imieAutora<<std::endl;
@@ -56,8 +60,23 @@ public:
     virtual int sila() = 0;
     virtual int inicjatywa() = 0;
     virtual void polozenie(int x, int y) = 0;
-    virtual Swiat swiat() = 0;
+    virtual Swiat* swiat() = 0;
 };
+
+class Zwierze : public Organizm
+{
+    int sila;
+    int inicjatywa;
+    int symbol;
+
+public:
+    Zwierze(char smb)
+    {
+        this->symbol = smb;
+    }
+    void 
+
+}
 
 int main()
 {
