@@ -111,13 +111,17 @@ public:
     {
         int i, j, force;
         int niechMocBedzieStobo = 0;
+        std::string log = "---";
 
         makeTurnqueue();
 
         for (i = 0; i < operationQueue.size(); i++) {
             if(operationQueue[i] == NULL)
                 continue;
-            this->enumToString( operationQueue[i]->akcja());
+            log = operationQueue[i]->rysowanie() + log;
+            log += this->enumToString( operationQueue[i]->akcja() );
+            logsQueue.push_back(log);
+            log = "---";
         }
         this->operationQueue.clear();
     }
@@ -125,8 +129,17 @@ public:
 
     void rysujSwiat()
     {
-        int i, j;
+        int i, j, last;
         rTerminal();
+
+        while (!logsQueue.empty()) {
+            std::cout<<logsQueue.back()<<std::endl;
+            logsQueue.pop_back();
+        }
+
+
+        std::cout << last << std::endl;
+    
         std::cout<<"Rysujemy Świat"<<std::endl;
         for (i = 0; i < this->sizeSwiatArray; i++ ) {
             std::cout<<"|";
@@ -178,7 +191,7 @@ private:
     const char* const imieAutora = "Dawid Węsierski";
     const char* const indeksAutora = "180029";
     std::vector<Organizm*> operationQueue;
-    std::vector<std::string> logsQUeue;
+    std::vector<std::string> logsQueue;
 
     static bool comp(Organizm* a, Organizm* b) {
         if ((a->inicjatywa > b->inicjatywa) ||
@@ -211,7 +224,7 @@ private:
             case SWIAT_COLLISION:
                 return "SWIAT_COLLISION";
             case SWIAT_MOVED_SUCCESSFULY:
-                return "SWIAT_SUCCESSFULY";
+                return "SWIAT_MOVED_SUCCESSFULY";
             case SWIAT_CHALLENGER_WINS:
                 return "SWIAT_CHALLENGER_WINS";
             case SWIAT_CHALLENGER_LOSES:
@@ -220,7 +233,9 @@ private:
                 return "SWIAT_BABY_CREATED";
             case SWIAT_BABY_ABORTED_OVERPOPULATION:
                 return " SWIAT_BABY_ABORTED_OVERPOPULATION";
-            default
+            case SWIAT_GROWED:
+                return "SWIAT_GROWED";
+            default:
                 return "SWIAT UNIMAGINABLE HORROR";
         }
     }
@@ -301,6 +316,7 @@ public:
         this->polozenie.y = polozenie.y;
         this->ourSwiat = swiat;
         this->inicjatywa = 0;
+        this->sila = 0;
         this->ourSwiat->addToSwiat(polozenie, this);
     }
 
@@ -313,12 +329,11 @@ public:
     {
         std::random_device rd;
         std::mt19937 gen(rd()); 
-        std::uniform_int_distribution<> propability(0, 10); 
+        std::uniform_int_distribution<> propability(0, 10);
 
-
-
-        if (propability(gen) > 7)
+        if (propability(gen) < 9)
             return SWIAT_SUCCESS;
+
         std::uniform_int_distribution<> distr(-1, 1); 
 
         point leap = {polozenie.x, polozenie.y};
@@ -330,10 +345,9 @@ public:
 
         if (this->ourSwiat->isEmpty(leap))
         {
-            this->ourSwiat->swiatArray[polozenie.x][polozenie.y] = NULL;
-            this->ourSwiat->swiatArray[leap.x][leap.y] = this;
-            polozenie = leap;
-            return SWIAT_MOVED_SUCCESSFULY;
+            this->ourSwiat->swiatArray[leap.x][leap.y] 
+                = new Roslina(this->ourSwiat, leap, this->symbol);
+            return SWIAT_GROWED;
         } else {
             return this->ourSwiat->swiatArray[leap.x][leap.y]->kolizja(this);
         }
@@ -349,12 +363,12 @@ public:
 class Terminal
 {
 public:
-    Terminal()
+    Terminal(int x)
     {
-        virtualWorld = new Swiat(3);
+        virtualWorld = new Swiat(x);
         control = 0;
         Zwierze* pimpek0 = new Zwierze(virtualWorld, {1,1}, 'a');
-        Zwierze* pimpek1 = new Zwierze(virtualWorld, {0,0}, 'b');
+        Roslina* p = new Roslina(virtualWorld, {0,0}, '@');
 
         while(control != 'x')
         {
@@ -366,10 +380,7 @@ public:
 
     ~Terminal()
     {
-        Swiat virtualWorld(2);
-        char control = 0;
-        Zwierze* pimpek0 = new Zwierze(&virtualWorld, {1,1}, 'a');
-        Zwierze* pimpek1 = new Zwierze(&virtualWorld, {0,0}, 'b');
+        delete virtualWorld;
     }
 
 protected:
@@ -388,6 +399,6 @@ protected:
 
 int main()
 {
-    Terminal one;
+    Terminal one(3);
     return 0;
 }
