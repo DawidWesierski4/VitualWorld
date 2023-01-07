@@ -360,6 +360,29 @@ public:
     }
 };
 
+class Wilk : public Zwierze
+{
+public:
+    Wilk(Swiat* swiat, point polozenie, char smb = 'W') :
+        Zwierze (swiat, polozenie, smb )
+    {
+        this->sila = 9;
+        this->inicjatywa = 5;
+    }
+};
+
+class Owca : public Zwierze
+{
+public:
+    Owca(Swiat* swiat, point polozenie, char smb = 'O') :
+        Zwierze (swiat, polozenie, smb )
+    {
+        this->sila = 4;
+        this->inicjatywa = 4;
+    }
+};
+
+
 class Terminal
 {
 public:
