@@ -238,6 +238,8 @@ private:
                 return "SWIAT_GROWED";
             case   SWIAT_NO_PLACE_TO_GROW:
                 return "  SWIAT_NO_PLACE_TO_GROW";
+            case   SWIAT_CHALLENGER_SCARED_OF_LION:
+                return "  SWIAT_CHALLENGER_SCARED_OF_LION";
             default:
                 return "SWIAT UNIMAGINABLE HORROR";
         }
@@ -298,6 +300,7 @@ public:
             return SWIAT_BABY_CREATED;
 
         } else if (this->sila >= obj->sila) {
+            this->ourSwiat->delQueue.push_back(obj);
             ourSwiat->swiatArray[obj->polozenie.x][obj->polozenie.y];
             ourSwiat->swiatArray[obj->polozenie.x][obj->polozenie.y] = NULL;
 
@@ -349,7 +352,6 @@ public:
 
     int kolizja(Organizm* obj)
     {
-        this->ourSwiat->delQueue.push_back(this);
         obj->kolizja(this);
         return SWIAT_CHALLENGER_WINS;
     }
@@ -377,6 +379,25 @@ public:
     }
 };
 
+class Lew : public Zwierze
+{
+public:
+    Lew(Swiat* swiat, point polozenie, char smb = 'L') :
+        Zwierze (swiat, polozenie, smb )
+    {
+        this->sila = 11;
+        this->inicjatywa = 7;
+    }
+
+    int kolizja(Organizm* obj)
+    {
+        if(obj.sila < 5){
+            
+        }
+    }
+
+};
+
 
 class Terminal
 {
@@ -385,10 +406,11 @@ public:
     {
         control = 0;
         virtualWorld = new Swiat(x);
-        // new Owca(virtualWorld, {1,0});
-        // new Wilk(virtualWorld, {1,1});
-        // new Wilk(virtualWorld, {0,1});
-        // new Wilk(virtualWorld, {2,1});
+        new Owca(virtualWorld, {1,0});
+        new Wilk(virtualWorld, {1,1});
+        new Wilk(virtualWorld, {0,1});
+        new Wilk(virtualWorld, {2,1});
+        new Lew (virtualWorld, {5,1});
         Roslina* p = new Roslina(virtualWorld, {0,0}, '@');
 
         while(control != 'x')
@@ -420,6 +442,13 @@ protected:
 
 int main()
 {
-    Terminal one(12);
+    try
+    {
+        Terminal one(12);
+    }
+    catch(...)
+    {
+    std::cout << "\nOj zlapany wyjatek\n";
+    }
     return 0;
 }
