@@ -62,6 +62,7 @@ public:
     point findNearEmpty(point obj) {
         std::vector<point> freebies;
         std::default_random_engine generator;
+
         int x, y, x1, y1, ret;
 
         if (obj.x != 0)
@@ -69,10 +70,12 @@ public:
         else
             x = obj.x;
 
+
         if (obj.y != 0)
             y = obj.y - 1;
         else 
             y = obj.y;
+
 
         if (obj.x + 1 < this->sizeSwiatArray)
             x1 = obj.x + 1;
@@ -83,15 +86,20 @@ public:
         else
             y1 = obj.y;
 
+
+        std::cout<<"ptr 1"<<std::endl;
+
         for(; x <= x1; x++) {
             for (; y <= y1; y++) {
-                if (this->isEmpty({x,y}) && (x != obj.x && y != obj.y))
+                if (this->isEmpty({x,y}) && ((x != obj.x) || (y != obj.y)))
+                {
                     freebies.push_back({x,y});
+                }
             }
-        if (obj.y != 0)
-            y = obj.y - 1;
-        else 
-            y = obj.y;
+            if (obj.y != 0)
+                y = obj.y - 1;
+            else 
+                y = obj.y;
         }
 
         ret = freebies.size();
@@ -100,10 +108,12 @@ public:
         std::mt19937 gen(rd()); // seed the generator
         std::uniform_int_distribution<> distr(0, ret-1); // define the range
 
+        x = distr(generator);
+
         if(ret == 0)
             return {-1,-1};
         else
-            return freebies[distr(gen)];
+            return freebies[x];
     }
 
 
@@ -137,9 +147,6 @@ public:
             std::cout<<logsQueue.back()<<std::endl;
             logsQueue.pop_back();
         }
-
-
-        std::cout << last << std::endl;
     
         std::cout<<"Rysujemy Świat"<<std::endl;
         for (i = 0; i < this->sizeSwiatArray; i++ ) {
@@ -220,7 +227,7 @@ private:
     {
         switch (a) {
             case SWIAT_SUCCESS:
-                return "SWIAT_SUCCESS";
+                return "SWIAT_NOTHING";
 
             case SWIAT_COLLISION:
                 return "SWIAT_COLLISION";
@@ -240,6 +247,8 @@ private:
                 return "  SWIAT_NO_PLACE_TO_GROW";
             case   SWIAT_CHALLENGER_SCARED_OF_LION:
                 return "  SWIAT_CHALLENGER_SCARED_OF_LION";
+            case SWIAT_LAZY_SLOTH:
+                return "SWIAT_LAZY_SLOTH";
             default:
                 return "SWIAT UNIMAGINABLE HORROR";
         }
@@ -252,6 +261,7 @@ public:
     Zwierze(Swiat* swiat, point polozenie, char smb)
     {
         this->symbol = smb;
+        this->wiek = this->inicjatywa + this->sila;
         this->polozenie.x = polozenie.x;
         this->polozenie.y = polozenie.y;
         this->ourSwiat = swiat;
@@ -275,6 +285,7 @@ public:
                 leap.x = this->polozenie.x + distr(gen);
                 leap.y = this->polozenie.y + distr(gen);
                 ourSwiat->moveToBounds(&leap);
+                std::cout<<"mtb -"<<leap.x<<" y - "<<leap.y<<std::endl;
             }
 
         if (this->ourSwiat->isEmpty(leap))
@@ -290,20 +301,20 @@ public:
 
     int kolizja(Organizm* obj)
     {
+
         if(this->symbol == obj->symbol) {
             point babyPosition;
+
             babyPosition = this->ourSwiat->findNearEmpty(this->polozenie);
+
             if (babyPosition.x == -1)
                 return SWIAT_BABY_ABORTED_OVERPOPULATION;
 
             new Zwierze(this->ourSwiat, babyPosition, this->symbol);
             return SWIAT_BABY_CREATED;
-
         } else if (this->sila >= obj->sila) {
             this->ourSwiat->delQueue.push_back(obj);
-            ourSwiat->swiatArray[obj->polozenie.x][obj->polozenie.y];
             ourSwiat->swiatArray[obj->polozenie.x][obj->polozenie.y] = NULL;
-
             return SWIAT_CHALLENGER_LOSES;
         } else {
             obj->kolizja(this);
@@ -334,10 +345,10 @@ public:
     int akcja()
     {
         std::random_device rd;
-        std::mt19937 gen(rd()); 
-        std::uniform_int_distribution<> propability(0, 10);
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<> propability(0, 100);
 
-        if (propability(gen) < 9)
+        if (propability(gen) < 95)
             return SWIAT_SUCCESS;
 
         point sprout = this->ourSwiat->findNearEmpty(this->polozenie);
@@ -347,15 +358,68 @@ public:
                 = new Roslina(this->ourSwiat, sprout, this->symbol);
             return SWIAT_GROWED;
         }
-        return   SWIAT_NO_PLACE_TO_GROW;
+        return SWIAT_NO_PLACE_TO_GROW;
     }
 
     int kolizja(Organizm* obj)
     {
+        std::cout<<"kolizja ?"<<std::endl;
         obj->kolizja(this);
         return SWIAT_CHALLENGER_WINS;
     }
 };
+
+class Mlecz : public Roslina
+{
+public:
+    Mlecz(Swiat* swiat, point polozenie, char smb = '#') :
+        Roslina (swiat, polozenie, smb) {};
+    
+    int akcja()
+    {
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<> propability(0, 100);
+
+        for(int i = 0; i < 3; i++) {
+            if (propability(gen) < 95)
+                    continue;
+            else if (propability(gen) < 95 && i == 2) {
+                return SWIAT_SUCCESS;
+            }
+        }
+
+        point sprout = this->ourSwiat->findNearEmpty(this->polozenie);
+
+        if(sprout.x != -1) {
+            this->ourSwiat->swiatArray[sprout.x][sprout.y]
+                = new Roslina(this->ourSwiat, sprout, this->symbol);
+            return SWIAT_GROWED;
+        }
+        return SWIAT_NO_PLACE_TO_GROW;
+    }
+};
+
+class Ciern : public Roslina
+{
+public:
+    Ciern(Swiat* swiat, point polozenie, char smb = '$') :
+        Roslina (swiat, polozenie, smb) {};
+
+    int akcja()
+    {
+        point sprout = this->ourSwiat->findNearEmpty(this->polozenie);
+
+        if(sprout.x != -1) {
+            this->ourSwiat->swiatArray[sprout.x][sprout.y]
+                = new Roslina(this->ourSwiat, sprout, this->symbol);
+            return SWIAT_GROWED;
+        }
+        return SWIAT_NO_PLACE_TO_GROW;
+    }
+
+};
+
 
 class Wilk : public Zwierze
 {
@@ -391,10 +455,73 @@ public:
 
     int kolizja(Organizm* obj)
     {
-        if(obj.sila < 5){
-            
+        if(obj->sila < 5){
+            return SWIAT_CHALLENGER_SCARED_OF_LION;
+        } else {
+            return Zwierze::kolizja(obj);
         }
     }
+
+};
+
+class Zulw : public Zwierze
+{
+public:
+    Zulw(Swiat* swiat, point polozenie, char smb = 'Z') :
+        Zwierze (swiat, polozenie, smb )
+    {
+        this->sila = 2;
+        this->inicjatywa = 1;
+    }
+
+    int kolizja(Organizm* obj)
+    {
+        if(obj->sila < 5){
+            return SWIAT_CHALLENGER_UNABLE_TO_PENETRATE_TURTLE;
+        } else {
+            return Zwierze::kolizja(obj);
+        }
+    }
+
+    int akcja()
+    {
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<> propability(0, 100);
+
+        if (propability(gen) < 75)
+            return SWIAT_SUCCESS;
+        else {
+            return Zwierze::akcja();
+        }
+    }
+};
+
+class Leniwiec : public Zwierze
+{
+public:
+    Leniwiec(Swiat* swiat, point polozenie, char smb = 'S') :
+        Zwierze (swiat, polozenie, smb )
+    {
+        this->sila = 2;
+        this->inicjatywa = 1;
+        this->moved = false;
+    }
+
+    int akcja()
+    {
+        if (this->moved) {
+            return SWIAT_LAZY_SLOTH;
+            this->moved = false;
+        } else {
+            this->moved = true;
+            std::cout<<this->moved<<std::endl;
+            return Zwierze::akcja();
+        }
+    }
+
+private:
+    bool moved;
 
 };
 
@@ -407,11 +534,13 @@ public:
         control = 0;
         virtualWorld = new Swiat(x);
         new Owca(virtualWorld, {1,0});
-        new Wilk(virtualWorld, {1,1});
-        new Wilk(virtualWorld, {0,1});
+        new Owca(virtualWorld, {1,1});
+        new Lew(virtualWorld, {0,1});
         new Wilk(virtualWorld, {2,1});
         new Lew (virtualWorld, {5,1});
-        Roslina* p = new Roslina(virtualWorld, {0,0}, '@');
+        new Leniwiec(virtualWorld, {4,1});
+        new Mlecz(virtualWorld, {0,0});
+        new Ciern(virtualWorld, {4,5});
 
         while(control != 'x')
         {
@@ -427,7 +556,6 @@ public:
     }
 
 protected:
-    std::vector<Organizm*> animalsQueue;
     Swiat* virtualWorld;
     char control;
 
@@ -444,11 +572,13 @@ int main()
 {
     try
     {
-        Terminal one(12);
+        Terminal one(13);
     }
     catch(...)
     {
     std::cout << "\nOj zlapany wyjatek\n";
     }
     return 0;
+
+
 }
