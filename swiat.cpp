@@ -25,6 +25,7 @@ class Swiat
 public:
     int sizeSwiatArray;
     Organizm ***swiatArray;
+    std::vector<Organizm*> delQueue;
 
     Swiat(int x)
     {
@@ -235,6 +236,8 @@ private:
                 return " SWIAT_BABY_ABORTED_OVERPOPULATION";
             case SWIAT_GROWED:
                 return "SWIAT_GROWED";
+            case   SWIAT_NO_PLACE_TO_GROW:
+                return "  SWIAT_NO_PLACE_TO_GROW";
             default:
                 return "SWIAT UNIMAGINABLE HORROR";
         }
@@ -295,7 +298,7 @@ public:
             return SWIAT_BABY_CREATED;
 
         } else if (this->sila >= obj->sila) {
-            delete ourSwiat->swiatArray[obj->polozenie.x][obj->polozenie.y];
+            ourSwiat->swiatArray[obj->polozenie.x][obj->polozenie.y];
             ourSwiat->swiatArray[obj->polozenie.x][obj->polozenie.y] = NULL;
 
             return SWIAT_CHALLENGER_LOSES;
@@ -334,29 +337,21 @@ public:
         if (propability(gen) < 9)
             return SWIAT_SUCCESS;
 
-        std::uniform_int_distribution<> distr(-1, 1); 
+        point sprout = this->ourSwiat->findNearEmpty(this->polozenie);
 
-        point leap = {polozenie.x, polozenie.y};
-            while(leap.x == polozenie.x && leap.y == polozenie.y) {
-                leap.x = this->polozenie.x + distr(gen);
-                leap.y = this->polozenie.y + distr(gen);
-                ourSwiat->moveToBounds(&leap);
-            }
-
-        if (this->ourSwiat->isEmpty(leap))
-        {
-            this->ourSwiat->swiatArray[leap.x][leap.y] 
-                = new Roslina(this->ourSwiat, leap, this->symbol);
+        if(sprout.x != -1) {
+            this->ourSwiat->swiatArray[sprout.x][sprout.y]
+                = new Roslina(this->ourSwiat, sprout, this->symbol);
             return SWIAT_GROWED;
-        } else {
-            return this->ourSwiat->swiatArray[leap.x][leap.y]->kolizja(this);
         }
+        return   SWIAT_NO_PLACE_TO_GROW;
     }
 
     int kolizja(Organizm* obj)
     {
-        //we are being eaten ><
-        return SWIAT_SUCCESS;
+        this->ourSwiat->delQueue.push_back(this);
+        obj->kolizja(this);
+        return SWIAT_CHALLENGER_WINS;
     }
 };
 
@@ -388,9 +383,12 @@ class Terminal
 public:
     Terminal(int x)
     {
-        virtualWorld = new Swiat(x);
         control = 0;
-        Zwierze* pimpek0 = new Zwierze(virtualWorld, {1,1}, 'a');
+        virtualWorld = new Swiat(x);
+        // new Owca(virtualWorld, {1,0});
+        // new Wilk(virtualWorld, {1,1});
+        // new Wilk(virtualWorld, {0,1});
+        // new Wilk(virtualWorld, {2,1});
         Roslina* p = new Roslina(virtualWorld, {0,0}, '@');
 
         while(control != 'x')
@@ -422,6 +420,6 @@ protected:
 
 int main()
 {
-    Terminal one(3);
+    Terminal one(12);
     return 0;
 }
