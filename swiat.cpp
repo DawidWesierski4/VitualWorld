@@ -4,6 +4,7 @@
 #include <vector>
 #include <algorithm>
 #include <random>
+#include <chrono>
 #include "swiat.h"
 
 #define BLACK_BLOCK "▪"
@@ -116,7 +117,7 @@ public:
         for (i = 0; i < operationQueue.size(); i++) {
             if(operationQueue[i] == NULL)
                 continue;
-            operationQueue[i]->akcja();
+            this->enumToString( operationQueue[i]->akcja());
         }
         this->operationQueue.clear();
     }
@@ -125,7 +126,7 @@ public:
     void rysujSwiat()
     {
         int i, j;
-        //rTerminal();
+        rTerminal();
         std::cout<<"Rysujemy Świat"<<std::endl;
         for (i = 0; i < this->sizeSwiatArray; i++ ) {
             std::cout<<"|";
@@ -159,6 +160,14 @@ public:
     ~Swiat()
     {
         int i;
+        makeTurnqueue();
+
+        for (i = 0; i < operationQueue.size(); i++) {
+            if(operationQueue[i] == NULL)
+                continue;
+            delete operationQueue[i];
+        }
+
         for (i = 0; i < sizeSwiatArray; i++)
             delete[] swiatArray[i];
         delete[] swiatArray;
@@ -169,6 +178,7 @@ private:
     const char* const imieAutora = "Dawid Węsierski";
     const char* const indeksAutora = "180029";
     std::vector<Organizm*> operationQueue;
+    std::vector<std::string> logsQUeue;
 
     static bool comp(Organizm* a, Organizm* b) {
         if ((a->inicjatywa > b->inicjatywa) ||
@@ -190,6 +200,29 @@ private:
             }
         }
         std::sort(operationQueue.begin(), operationQueue.end(), comp);
+    }
+
+    std::string enumToString(int a)
+    {
+        switch (a) {
+            case SWIAT_SUCCESS:
+                return "SWIAT_SUCCESS";
+
+            case SWIAT_COLLISION:
+                return "SWIAT_COLLISION";
+            case SWIAT_MOVED_SUCCESSFULY:
+                return "SWIAT_SUCCESSFULY";
+            case SWIAT_CHALLENGER_WINS:
+                return "SWIAT_CHALLENGER_WINS";
+            case SWIAT_CHALLENGER_LOSES:
+                return "SWIAT_CHALLENGER_LOSES";
+            case SWIAT_BABY_CREATED:
+                return "SWIAT_BABY_CREATED";
+            case SWIAT_BABY_ABORTED_OVERPOPULATION:
+                return " SWIAT_BABY_ABORTED_OVERPOPULATION";
+            default
+                return "SWIAT UNIMAGINABLE HORROR";
+        }
     }
 };
 
@@ -216,26 +249,21 @@ public:
         std::random_device rd; // obtain a random number from hardware
         std::mt19937 gen(rd()); // seed the generator
         std::uniform_int_distribution<> distr(-1, 1); // define the range
+
         point leap = {polozenie.x, polozenie.y};
             while(leap.x == polozenie.x && leap.y == polozenie.y) {
                 leap.x = this->polozenie.x + distr(gen);
                 leap.y = this->polozenie.y + distr(gen);
                 ourSwiat->moveToBounds(&leap);
-                std::cout<<"before x = "<<leap.x<<" y = "<<leap.y<<std::endl;
             }
-
-        std::cout<<"after x = "<<leap.x<<" y = "<<leap.y<<std::endl;
 
         if (this->ourSwiat->isEmpty(leap))
         {
-            std::cout<<"YAS"<<std::endl;
             this->ourSwiat->swiatArray[polozenie.x][polozenie.y] = NULL;
             this->ourSwiat->swiatArray[leap.x][leap.y] = this;
             polozenie = leap;
             return SWIAT_MOVED_SUCCESSFULY;
         } else {
-            std::cout<<"WTKURWAFUCK"<<this->ourSwiat->isEmpty(leap)<<std::endl;
-
             return this->ourSwiat->swiatArray[leap.x][leap.y]->kolizja(this);
         }
     }
@@ -251,7 +279,7 @@ public:
             new Zwierze(this->ourSwiat, babyPosition, this->symbol);
             return SWIAT_BABY_CREATED;
 
-        } else if (this->sila > obj->sila) {
+        } else if (this->sila >= obj->sila) {
             delete ourSwiat->swiatArray[obj->polozenie.x][obj->polozenie.y];
             ourSwiat->swiatArray[obj->polozenie.x][obj->polozenie.y] = NULL;
 
@@ -272,6 +300,7 @@ public:
         this->polozenie.x = polozenie.x;
         this->polozenie.y = polozenie.y;
         this->ourSwiat = swiat;
+        this->inicjatywa = 0;
         this->ourSwiat->addToSwiat(polozenie, this);
     }
 
@@ -282,40 +311,83 @@ public:
 
     int akcja()
     {
-        //we are a plant what did ya expect a flip ?
-        return SWIAT_SUCCESS;
+        std::random_device rd;
+        std::mt19937 gen(rd()); 
+        std::uniform_int_distribution<> propability(0, 10); 
+
+
+
+        if (propability(gen) > 7)
+            return SWIAT_SUCCESS;
+        std::uniform_int_distribution<> distr(-1, 1); 
+
+        point leap = {polozenie.x, polozenie.y};
+            while(leap.x == polozenie.x && leap.y == polozenie.y) {
+                leap.x = this->polozenie.x + distr(gen);
+                leap.y = this->polozenie.y + distr(gen);
+                ourSwiat->moveToBounds(&leap);
+            }
+
+        if (this->ourSwiat->isEmpty(leap))
+        {
+            this->ourSwiat->swiatArray[polozenie.x][polozenie.y] = NULL;
+            this->ourSwiat->swiatArray[leap.x][leap.y] = this;
+            polozenie = leap;
+            return SWIAT_MOVED_SUCCESSFULY;
+        } else {
+            return this->ourSwiat->swiatArray[leap.x][leap.y]->kolizja(this);
+        }
     }
 
     int kolizja(Organizm* obj)
     {
-        
         //we are being eaten ><
         return SWIAT_SUCCESS;
     }
 };
 
-static char terminalHandler ()
+class Terminal
 {
-    int cntrl = 0;
-    std::cout << "Naciśnij enter, aby kontynuować..." << std::endl;
-    return getchar();
-}
+public:
+    Terminal()
+    {
+        virtualWorld = new Swiat(3);
+        control = 0;
+        Zwierze* pimpek0 = new Zwierze(virtualWorld, {1,1}, 'a');
+        Zwierze* pimpek1 = new Zwierze(virtualWorld, {0,0}, 'b');
+
+        while(control != 'x')
+        {
+            virtualWorld->rysujSwiat();
+            control = terminalHandler();
+            virtualWorld->WykonajTure();
+        }
+    }
+
+    ~Terminal()
+    {
+        Swiat virtualWorld(2);
+        char control = 0;
+        Zwierze* pimpek0 = new Zwierze(&virtualWorld, {1,1}, 'a');
+        Zwierze* pimpek1 = new Zwierze(&virtualWorld, {0,0}, 'b');
+    }
+
+protected:
+    std::vector<Organizm*> animalsQueue;
+    Swiat* virtualWorld;
+    char control;
+
+    static char terminalHandler ()
+    {
+        int cntrl = 0;
+        std::cout << "Naciśnij enter, aby kontynuować..." << std::endl;
+        return getchar();
+    }
+};
 
 
 int main()
 {
-    Swiat virtualWorld(35);
-    char control = 0;
-    Zwierze* pimpek0 = new Zwierze(&virtualWorld, {34,34}, 'a');
-
-    std::cout<<"Hey";
-    while(control != 'x')
-    {
-        virtualWorld.rysujSwiat();
-        control = terminalHandler();
-        virtualWorld.WykonajTure();
-    }
-
-
+    Terminal one;
     return 0;
 }
