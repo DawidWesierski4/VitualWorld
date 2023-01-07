@@ -25,11 +25,7 @@ inline void rTerminal(void)
 int randInt(unsigned int range = 1)
 {
     int i;
-    if (range == 0)
-        return 0;
-    i = (rand() % ((range + 1)));
-    if(rand() % 2 == 0)
-        return i * -1;
+    i = (rand() % range);
     return i;
 
 }
@@ -62,21 +58,48 @@ public:
       *     world ) If every field is taken it returns pointer to -1 -1
      **/
     point findNearEmpty(point obj) {
-        int i,j;
-        for (i = -1; i <= 1; i++) {
-            for (j = -1; j <= 1; j++ ) {
-                if (obj.x + i < 0 || obj.y + j < 0)
-                    continue;
-                else if (swiatArray[obj.x + i][obj.y + j] == NULL)
-                    return {obj.x + i, obj.y + j};
+        std::vector<point> freebies;
+        int x, y, x1, y1, ret;
+        if (obj.x != 0)
+            x = obj.x - 1;
+        else
+            x = obj.x;
+
+        if (obj.y != 0)
+            y = obj.y - 1;
+        else 
+            y = obj.y;
+
+        if (obj.x + 1 < this->sizeSwiatArray)
+            x1 = obj.x + 1;
+        else
+            x1 = obj.x;
+        if (obj.y + 1 < this->sizeSwiatArray)
+            y1 = obj.y + 1;
+        else
+            y1 = obj.y;
+
+        for(; x <= x1; x++) {
+            for (; y <= y1; y++) {
+                if (this->isEmpty({x,y}) && (x != obj.x && y != obj.y))
+                    freebies.push_back({x,y});
             }
+        if (obj.y != 0)
+            y = obj.y - 1;
+        else 
+            y = obj.y;
         }
-        return {-1,-1};
+
+        ret = freebies.size();
+        if(ret == 0)
+            return {-1,-1};
+        else
+            return freebies[randInt(freebies.size())];
     }
 
     void WykonajTure(void)
     {
-        int i, j;
+        int i, j, force;
         int niechMocBedzieStobo = 0;
 
         /* find the biggest icnetive */
@@ -89,20 +112,20 @@ public:
             }
 
         std::cout<<"Rysujemy Świat"<<std::endl;
-        std::cout<<this->sizeSwiatArray<<std::endl;
-        /* FORCE METHOD! */
-        
-        for (i = 0; i < this->sizeSwiatArray; i++ ) {
-            std::cout<<"|";
-            for (j = 0; j < this->sizeSwiatArray; j++) {
-                if (this->swiatArray[i][j] == NULL)
-                    continue;
-                
-                    swiatArray[i][j]->akcja() == SWIAT_SUCCESS)
 
-
-                }
+        /* FORCE METHOD! FUTURE DAWID OPTIMALIZATION PROBLEM */
+        for (force = niechMocBedzieStobo; force > 0; force--)
+        {
+            for (i = 0; i < this->sizeSwiatArray; i++ ) {
+                for (j = 0; j < this->sizeSwiatArray; j++) {
+                    if (this->swiatArray[i][j] == NULL)
+                        continue;
+                    if (force == this->swiatArray[i][j]->inicjatywa);
+                        swiatArray[i][j]->akcja();
+                    }
             }
+            std::cout<<force<<std::endl;
+        }
     }
 
 
@@ -111,7 +134,6 @@ public:
         int i, j;
         rTerminal();
         std::cout<<"Rysujemy Świat"<<std::endl;
-        std::cout<<this->sizeSwiatArray<<std::endl;
         for (i = 0; i < this->sizeSwiatArray; i++ ) {
             std::cout<<"|";
             for (j = 0; j < this->sizeSwiatArray; j++) {
@@ -157,8 +179,6 @@ private:
 class Zwierze : public Organizm
 {
 public:
-    point leapCords;
-
     Zwierze(Swiat* swiat, point polozenie, char smb)
     {
         this->symbol = smb;
@@ -166,6 +186,7 @@ public:
         this->polozenie.y = polozenie.y;
         this->ourSwiat = swiat;
         this->ourSwiat->swiatArray[polozenie.x][polozenie.y] = this;
+        this->inicjatywa = 1;
     }
 
     char rysowanie()
@@ -184,38 +205,32 @@ public:
         {
             this->ourSwiat->swiatArray[polozenie.x][polozenie.y] = NULL;
             this->ourSwiat->swiatArray[leap.x][leap.y] = this;
+            return SWIAT_MOVED_SUCCESSFULY;
         } else {
-            this->leapCords.x = leap.x;
-            this->leapCords.y = leap.y;
+            return this->ourSwiat->swiatArray[leap.x][leap.y]->kolizja(this);
         }
-
-        return SWIAT_SUCCESS;
     }
 
     int kolizja(Organizm* obj)
     {
-        Organizm* obj = 
-               this->ourSwiat->swiatArray[this->leapCords.x][this->leapCords.y];
-
         if(this->symbol == obj->symbol) {
             point babyPosition;
             babyPosition = this->ourSwiat->findNearEmpty(this->polozenie);
-            Zwierze(this->ourSwiat, babyPosition, this->symbol);
+            if (babyPosition.x == -1)
+                return SWIAT_BABY_ABORTED_OVERPOPULATION;
+
+            new Zwierze(this->ourSwiat, babyPosition, this->symbol);
             return SWIAT_BABY_CREATED;
+
         } else if (this->sila > obj->sila) {
-            Organizm *aux = ourSwiat->swiatArray[leapCords.x][leapCords.y];
-            ourSwiat->swiatArray[polozenie.x][polozenie.y] = NULL;
-            ourSwiat->swiatArray[leapCords.x][leapCords.y] = this;
-            delete aux;
-            this->polozenie.x = this->leapCords.x;
-            this->polozenie.y = this->leapCords.y;
-            return SWIAT_WINS;
+            delete ourSwiat->swiatArray[obj->polozenie.x][obj->polozenie.y];
+            ourSwiat->swiatArray[obj->polozenie.x][obj->polozenie.y] = NULL;
+
+            return SWIAT_CHALLENGER_LOSES;
         } else {
-
-            return SWIAT_LOST;
+            obj->kolizja(this);
+            return SWIAT_CHALLENGER_WINS;
         }
-
-        return SWIAT_SUCCESS;
     }
 };
 
@@ -254,9 +269,15 @@ int main()
 {
     srand((unsigned)time(0));
     bool reset;
-    Swiat virtualWorld(20);
+    Swiat virtualWorld(5);
     point a = {0,0};
-    Zwierze* pimpek = new Zwierze(&virtualWorld, a, 'a');
+
+    Zwierze* pimpek0 = new Zwierze(&virtualWorld, {1,1}, 'a');
+    Zwierze* pimpek1 = new Zwierze(&virtualWorld, {0,1}, 'a');
+    Zwierze* pimpek2 = new Zwierze(&virtualWorld, {1,0}, 'a');
     virtualWorld.rysujSwiat();
+    a = virtualWorld.findNearEmpty({0,0});
+    std::cout<<"x = "<<a.x <<" y = "<<a.y<<std::endl;
+    // virtualWorld.WykonajTure();
     return 0;
 }
