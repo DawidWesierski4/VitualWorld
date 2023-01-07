@@ -2,6 +2,8 @@
 #include <cstdlib>
 #include <random>
 #include <vector>
+#include <algorithm>
+#include <random>
 #include "swiat.h"
 
 #define BLACK_BLOCK "▪"
@@ -17,19 +19,6 @@ inline void rTerminal(void)
     std::cout<<"\033[2J"<<std::flush;
 }
 
-/**
-  * randNear Point
-  *  Function returns point that is moved by specifed reange in random direction
-  *  
-*/
-int randInt(unsigned int range = 1)
-{
-    int i;
-    i = (rand() % range);
-    return i;
-
-}
-
 class Swiat
 {
 public:
@@ -40,7 +29,6 @@ public:
     {
         int i, j;
         this->sizeSwiatArray = x;
-        std::cout<<sizeSwiatArray<<" "<<i<<std::endl;
         swiatArray = new Organizm**[x];
         for (i = 0; i < x; i++)
         {
@@ -51,6 +39,18 @@ public:
         }
     }
 
+    void moveToBounds(point *p)
+    {
+        if (p->x < 0)
+            p->x=0;
+        if (p->y < 0)
+            p->y=0;
+        if (p->x >= this->sizeSwiatArray)
+            p->x = this->sizeSwiatArray-1;
+        if (p->y >= this->sizeSwiatArray)
+            p->y = this->sizeSwiatArray-1;
+    }
+
     /**
       * findNearEmpty
       *     this funciton goes around the input point and points to the first 
@@ -59,7 +59,9 @@ public:
      **/
     point findNearEmpty(point obj) {
         std::vector<point> freebies;
+        std::default_random_engine generator;
         int x, y, x1, y1, ret;
+
         if (obj.x != 0)
             x = obj.x - 1;
         else
@@ -91,48 +93,39 @@ public:
         }
 
         ret = freebies.size();
+
+        std::random_device rd; // obtain a random number from hardware
+        std::mt19937 gen(rd()); // seed the generator
+        std::uniform_int_distribution<> distr(0, ret-1); // define the range
+
         if(ret == 0)
             return {-1,-1};
         else
-            return freebies[randInt(freebies.size())];
+            return freebies[distr(gen)];
     }
+
+
 
     void WykonajTure(void)
     {
         int i, j, force;
         int niechMocBedzieStobo = 0;
 
-        /* find the biggest icnetive */
-        for (i = 0; i < this->sizeSwiatArray; i++ ) {
-            for (j = 0; j < this->sizeSwiatArray; j++) {
-                if(this->swiatArray[i][j] != NULL &&
-                   this->swiatArray[i][j]->inicjatywa > niechMocBedzieStobo)
-                    niechMocBedzieStobo = this->swiatArray[i][j]->inicjatywa;
-                }
-            }
+        makeTurnqueue();
 
-        std::cout<<"Rysujemy Świat"<<std::endl;
-
-        /* FORCE METHOD! FUTURE DAWID OPTIMALIZATION PROBLEM */
-        for (force = niechMocBedzieStobo; force > 0; force--)
-        {
-            for (i = 0; i < this->sizeSwiatArray; i++ ) {
-                for (j = 0; j < this->sizeSwiatArray; j++) {
-                    if (this->swiatArray[i][j] == NULL)
-                        continue;
-                    if (force == this->swiatArray[i][j]->inicjatywa);
-                        swiatArray[i][j]->akcja();
-                    }
-            }
-            std::cout<<force<<std::endl;
+        for (i = 0; i < operationQueue.size(); i++) {
+            if(operationQueue[i] == NULL)
+                continue;
+            operationQueue[i]->akcja();
         }
+        this->operationQueue.clear();
     }
 
 
     void rysujSwiat()
     {
         int i, j;
-        rTerminal();
+        //rTerminal();
         std::cout<<"Rysujemy Świat"<<std::endl;
         for (i = 0; i < this->sizeSwiatArray; i++ ) {
             std::cout<<"|";
@@ -162,6 +155,7 @@ public:
         swiatArray[pol.x][pol.y] = obj;
     }
 
+
     ~Swiat()
     {
         int i;
@@ -174,6 +168,29 @@ private:
     /* It is impossible to change the name of the author cuz it is a const */
     const char* const imieAutora = "Dawid Węsierski";
     const char* const indeksAutora = "180029";
+    std::vector<Organizm*> operationQueue;
+
+    static bool comp(Organizm* a, Organizm* b) {
+        if ((a->inicjatywa > b->inicjatywa) ||
+            (a->inicjatywa == b->inicjatywa) && (a->wiek > b->wiek))
+            return true;
+        else
+            return false;
+    }
+
+    void makeTurnqueue()
+    {
+        int x, y;
+
+        for(x = 0; x < this->sizeSwiatArray; x++) {
+            for (y = 0; y < this->sizeSwiatArray; y++) {
+                if (this->swiatArray[x][y] != NULL) {
+                    this->operationQueue.push_back(this->swiatArray[x][y]);
+                }
+            }
+        }
+        std::sort(operationQueue.begin(), operationQueue.end(), comp);
+    }
 };
 
 class Zwierze : public Organizm
@@ -196,17 +213,29 @@ public:
 
     int akcja()
     {
-        point leap = {
-            .x = this->polozenie.x + randInt(),
-            .y = this->polozenie.y + randInt()
-        };
+        std::random_device rd; // obtain a random number from hardware
+        std::mt19937 gen(rd()); // seed the generator
+        std::uniform_int_distribution<> distr(-1, 1); // define the range
+        point leap = {polozenie.x, polozenie.y};
+            while(leap.x == polozenie.x && leap.y == polozenie.y) {
+                leap.x = this->polozenie.x + distr(gen);
+                leap.y = this->polozenie.y + distr(gen);
+                ourSwiat->moveToBounds(&leap);
+                std::cout<<"before x = "<<leap.x<<" y = "<<leap.y<<std::endl;
+            }
+
+        std::cout<<"after x = "<<leap.x<<" y = "<<leap.y<<std::endl;
 
         if (this->ourSwiat->isEmpty(leap))
         {
+            std::cout<<"YAS"<<std::endl;
             this->ourSwiat->swiatArray[polozenie.x][polozenie.y] = NULL;
             this->ourSwiat->swiatArray[leap.x][leap.y] = this;
+            polozenie = leap;
             return SWIAT_MOVED_SUCCESSFULY;
         } else {
+            std::cout<<"WTKURWAFUCK"<<this->ourSwiat->isEmpty(leap)<<std::endl;
+
             return this->ourSwiat->swiatArray[leap.x][leap.y]->kolizja(this);
         }
     }
@@ -265,19 +294,28 @@ public:
     }
 };
 
+static char terminalHandler ()
+{
+    int cntrl = 0;
+    std::cout << "Naciśnij enter, aby kontynuować..." << std::endl;
+    return getchar();
+}
+
+
 int main()
 {
-    srand((unsigned)time(0));
-    bool reset;
-    Swiat virtualWorld(5);
-    point a = {0,0};
+    Swiat virtualWorld(35);
+    char control = 0;
+    Zwierze* pimpek0 = new Zwierze(&virtualWorld, {34,34}, 'a');
 
-    Zwierze* pimpek0 = new Zwierze(&virtualWorld, {1,1}, 'a');
-    Zwierze* pimpek1 = new Zwierze(&virtualWorld, {0,1}, 'a');
-    Zwierze* pimpek2 = new Zwierze(&virtualWorld, {1,0}, 'a');
-    virtualWorld.rysujSwiat();
-    a = virtualWorld.findNearEmpty({0,0});
-    std::cout<<"x = "<<a.x <<" y = "<<a.y<<std::endl;
-    // virtualWorld.WykonajTure();
+    std::cout<<"Hey";
+    while(control != 'x')
+    {
+        virtualWorld.rysujSwiat();
+        control = terminalHandler();
+        virtualWorld.WykonajTure();
+    }
+
+
     return 0;
 }
